@@ -12,20 +12,32 @@
 #include <termios.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <raylib.h>
+#include <math.h>
 
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 volatile int stop = 0;
+int modem_fd = 0;
+
+volatile Vector2 orientation = { 0 };
+
+// Read from serial port in a separate thread to avoid blocking draw loop
+void* modem_thread(void* arg);
+
+void* render_thread(void* arg);
 
 int main(int argc, char** argv) {
+	// Serial port setup
 	if (argc < 2) {
 		printf("No serial port indicated\n");
 		return 0;
 	}
 
 	const char* modem_dev = argv[1];
-	int modem_fd = open(modem_dev, O_RDWR | O_NOCTTY);
+	modem_fd = open(modem_dev, O_RDWR | O_NOCTTY);
 	if (modem_fd < 0) {
 		printf("Failed to open modem device: %s\n", modem_dev);
 		return 1;
@@ -59,26 +71,61 @@ int main(int argc, char** argv) {
 	tcflush(modem_fd, TCIFLUSH);
 	tcsetattr(modem_fd, TCSANOW, &newtio);
 
+	pthread_t thread_handle = { 0 };
+	pthread_create(&thread_handle, NULL, modem_thread, NULL);
+
+	render_thread(NULL);
+
+	pthread_join(thread_handle, NULL);
+
+	// Restore old port settings
+	tcsetattr(modem_fd, TCSANOW, &oldtio);
+	close(modem_fd);
+
+	return 0;
+}
+
+void* modem_thread(void* arg) {
 	const int buflen = 1024;
 	char buf[buflen];
 	int res = 0;
-
-	int count = 0;
-	while (count++ < 100) {
+	while (!stop) {
 		res = read(modem_fd, buf, buflen);
 		buf[res] = 0;
 		int x = 0, y = 0;
 		int conv = sscanf(buf, "Ang.x = %d\t\tAng.y = %d", &x, &y);
-//		printf("%s", buf);
-		if (conv > 0)
-			printf("x = %d\ty = %d\n", x, y);
-		if (buf[0] == 'z') stop = 1;
+		if (conv == 2) {
+			orientation = (Vector2) { (float)x, (float)y };
+		}
 	}
+	return NULL;
+}
 
-	// Restore old port settings
-	tcsetattr(modem_fd, TCSANOW, &oldtio);
+void* render_thread(void* arg) {
+	SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN | FLAG_VSYNC_HINT);
+	InitWindow(1920, 1080, "IMU Visualizer");
+	SetTargetFPS(120);
+	while (!WindowShouldClose()) {
+		const float rad = 300.f;
+		float x_ang = DEG2RAD * orientation.x;
+		float y_ang = DEG2RAD * orientation.y;
+		Vector2 x_begin = { 1*1920/4, 1080/2 };
+		Vector2 y_begin = { 3*1920/4, 1080/2 };
+		Vector2 x_end = x_begin;
+		Vector2 y_end = y_begin;
+		x_end.x += rad * cosf(-x_ang);
+		x_end.y += rad * sinf(-x_ang);
+		y_end.x += rad * cosf(-y_ang);
+		y_end.y += rad * sinf(-y_ang);
 
-	close(modem_fd);
-
-	return 0;
+		BeginDrawing();
+		ClearBackground(BLACK);
+		DrawText(TextFormat("x = %f\ny = %f", orientation.x, orientation.y), 20,20,40,GREEN);
+		DrawLineV(x_begin, x_end, WHITE);
+		DrawLineV(y_begin, y_end, WHITE);
+		EndDrawing();
+	}
+	CloseWindow();
+	stop = true;	// Tell modem thread to exit
+	return NULL;
 }
