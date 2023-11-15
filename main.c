@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <raylib.h>
+#include <raymath.h>
 #include <math.h>
 
 #define BAUDRATE B38400
@@ -105,6 +106,16 @@ void* render_thread(void* arg) {
 	SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN | FLAG_VSYNC_HINT);
 	InitWindow(1920, 1080, "IMU Visualizer");
 	SetTargetFPS(120);
+	
+	Camera camera = { 0 };
+	camera.projection = CAMERA_PERSPECTIVE;
+	camera.fovy = 90.f;
+	camera.position = (Vector3) { -3.f, 3.f, -0.f };
+	camera.target = (Vector3) { 0.f, 0.f, 0.f };
+	camera.up = (Vector3) { 0.f, 1.f, 0.f };
+
+	Model cube_model = LoadModelFromMesh(GenMeshCube(1.f, 1.f, 1.f));
+
 	while (!WindowShouldClose()) {
 		const float rad = 300.f;
 		float x_ang = DEG2RAD * orientation.x;
@@ -118,13 +129,24 @@ void* render_thread(void* arg) {
 		y_end.x += rad * cosf(-y_ang);
 		y_end.y += rad * sinf(-y_ang);
 
+		Vector3 rotation_axis = { -x_ang, 0.f, y_ang };
+		float rotation_angle = RAD2DEG * Vector3Length(rotation_axis);
+		rotation_axis = Vector3Normalize(rotation_axis);
+		Vector3 pos = { 0.f, 1.f, 0.f };
+		Vector3 scale = { 1.f, 1.f, 1.f };
+
 		BeginDrawing();
 		ClearBackground(BLACK);
+		BeginMode3D(camera);
+		DrawGrid(10,1);
+		DrawModelWiresEx(cube_model, pos, rotation_axis, rotation_angle, scale, RED);
+		EndMode3D();
 		DrawText(TextFormat("x = %f\ny = %f", orientation.x, orientation.y), 20,20,40,GREEN);
-		DrawLineV(x_begin, x_end, WHITE);
-		DrawLineV(y_begin, y_end, WHITE);
+//		DrawLineV(x_begin, x_end, WHITE);
+//		DrawLineV(y_begin, y_end, WHITE);
 		EndDrawing();
 	}
+	UnloadModel(cube_model);
 	CloseWindow();
 	stop = true;	// Tell modem thread to exit
 	return NULL;
