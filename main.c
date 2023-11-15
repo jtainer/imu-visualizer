@@ -1,3 +1,11 @@
+// 
+// IMU Visualizer
+// Reads IMU tracking data over virtual serial port
+// Displays position and orientation using a virtual object
+//
+// 2023, Jonathan Tainer
+//
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -54,10 +62,16 @@ int main(int argc, char** argv) {
 	const int buflen = 1024;
 	char buf[buflen];
 	int res = 0;
-	while (!stop) {
+
+	int count = 0;
+	while (count++ < 100) {
 		res = read(modem_fd, buf, buflen);
 		buf[res] = 0;
-		printf("%s\n", buf);
+		int x = 0, y = 0;
+		int conv = sscanf(buf, "Ang.x = %d\t\tAng.y = %d", &x, &y);
+//		printf("%s", buf);
+		if (conv > 0)
+			printf("x = %d\ty = %d\n", x, y);
 		if (buf[0] == 'z') stop = 1;
 	}
 
