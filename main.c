@@ -3,7 +3,7 @@
 // Reads IMU tracking data over virtual serial port
 // Displays position and orientation using a virtual object
 //
-// 2023, Jonathan Tainer
+// Copyright 2023 Jonathan Tainer.
 //
 
 #include <sys/types.h>
@@ -20,7 +20,7 @@
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
-volatile int stop = 0;
+volatile int modem_thread_stop = 0;
 int modem_fd = 0;
 
 volatile Vector2 orientation = { 0 };
@@ -72,11 +72,13 @@ int main(int argc, char** argv) {
 	tcflush(modem_fd, TCIFLUSH);
 	tcsetattr(modem_fd, TCSANOW, &newtio);
 
+	modem_thread_stop = false;
 	pthread_t thread_handle = { 0 };
 	pthread_create(&thread_handle, NULL, modem_thread, NULL);
 
 	render_thread(NULL);
 
+	modem_thread_stop = true;
 	pthread_join(thread_handle, NULL);
 
 	// Restore old port settings
@@ -90,7 +92,7 @@ void* modem_thread(void* arg) {
 	const int buflen = 1024;
 	char buf[buflen];
 	int res = 0;
-	while (!stop) {
+	while (!modem_thread_stop) {
 		res = read(modem_fd, buf, buflen);
 		buf[res] = 0;
 		int x = 0, y = 0;
@@ -148,6 +150,5 @@ void* render_thread(void* arg) {
 	}
 	UnloadModel(cube_model);
 	CloseWindow();
-	stop = true;	// Tell modem thread to exit
 	return NULL;
 }
