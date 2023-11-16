@@ -20,6 +20,8 @@
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
+#define RAYLIB_5_0
+
 volatile int modem_thread_stop = 0;
 int modem_fd = 0;
 
@@ -106,8 +108,12 @@ void* modem_thread(void* arg) {
 
 void* render_thread(void* arg) {
 	SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN | FLAG_VSYNC_HINT);
-	InitWindow(1920, 1080, "IMU Visualizer");
+	InitWindow(2560, 1440, "IMU Visualizer");
 	SetTargetFPS(120);
+
+	#ifdef RAYLIB_5_0
+	SetTextLineSpacing(40);
+	#endif
 	
 	Camera camera = { 0 };
 	camera.projection = CAMERA_PERSPECTIVE;
@@ -141,7 +147,8 @@ void* render_thread(void* arg) {
 		ClearBackground(BLACK);
 		BeginMode3D(camera);
 		DrawGrid(10,1);
-		DrawModelWiresEx(cube_model, pos, rotation_axis, rotation_angle, scale, RED);
+		DrawModelEx(cube_model, pos, rotation_axis, rotation_angle, scale, RED);
+		DrawModelWiresEx(cube_model, pos, rotation_axis, rotation_angle, scale, BLACK);
 		EndMode3D();
 		DrawText(TextFormat("x = %f\ny = %f", orientation.x, orientation.y), 20,20,40,GREEN);
 //		DrawLineV(x_begin, x_end, WHITE);
