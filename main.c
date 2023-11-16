@@ -3,7 +3,7 @@
 // Reads IMU tracking data over virtual serial port
 // Displays position and orientation using a virtual object
 //
-// Copyright 2023 Jonathan Tainer.
+// Copyright (c) 2023 Jonathan Tainer. Subject to the BSD 2-Clause License.
 //
 
 #include <sys/types.h>
