@@ -125,32 +125,15 @@ void* render_thread(void* arg) {
 	Model cube_model = LoadModelFromMesh(GenMeshCube(1.f, 1.f, 1.f));
 
 	while (!WindowShouldClose()) {
-		// Display rotation using a dial for each axis
+		
+		// Rotate a cube corresponding to the IMU measurements
 		float x_ang = DEG2RAD * orientation.x;
 		float y_ang = DEG2RAD * orientation.y;
-/*		const float rad = 300.f;
-		Vector2 x_begin = { 1*1920/4, 1080/2 };
-		Vector2 y_begin = { 3*1920/4, 1080/2 };
-		Vector2 x_end = x_begin;
-		Vector2 y_end = y_begin;
-		x_end.x += rad * cosf(-x_ang);
-		x_end.y += rad * sinf(-x_ang);
-		y_end.x += rad * cosf(-y_ang);
-		y_end.y += rad * sinf(-y_ang);
-*/
-		// Rotate a cube corresponding to the IMU measurements
 		Vector3 rotation_axis = { -x_ang, 0.f, y_ang };
 		float rotation_angle = RAD2DEG * Vector3Length(rotation_axis);
 		rotation_axis = Vector3Normalize(rotation_axis);
 		Vector3 pos = { 0.f, 1.f, 0.f };
 		Vector3 scale = { 1.f, 1.f, 1.f };
-
-		// Example matrix manipulation code
-		Matrix transform = MatrixRotate(rotation_axis, DEG2RAD * rotation_angle);
-		// General method for inverting 4x4 matrix
-		Matrix inv_transform_0 = MatrixInvert(transform);
-		// Because it is only performing rotation, we can also do
-		Matrix inv_transform_1 = MatrixRotate(rotation_axis, DEG2RAD * rotation_angle * -1);
 
 		BeginDrawing();
 		ClearBackground(BLACK);
@@ -159,10 +142,8 @@ void* render_thread(void* arg) {
 		DrawModelEx(cube_model, pos, rotation_axis, rotation_angle, scale, RED);
 		DrawModelWiresEx(cube_model, pos, rotation_axis, rotation_angle, scale, BLACK);
 		EndMode3D();
-		DrawText(TextFormat("x = %f\ny = %f", orientation.x, orientation.y), 20,20,40,GREEN);
-//		DrawLineV(x_begin, x_end, WHITE);
-//		DrawLineV(y_begin, y_end, WHITE);
 		EndDrawing();
+
 	}
 	UnloadModel(cube_model);
 	CloseWindow();
