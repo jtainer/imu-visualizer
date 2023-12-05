@@ -97,10 +97,10 @@ void* modem_thread(void* arg) {
 	while (!modem_thread_stop) {
 		res = read(modem_fd, buf, buflen);
 		buf[res] = 0;
-		int w = 0, x = 0, y = 0, z = 0;
-		int conv = sscanf(buf, "w = %d x = %d y = %d z = %d\n", &w, &x, &y, &z);
+		float w = 0, x = 0, y = 0, z = 0;
+		int conv = sscanf(buf, "w = %f x = %f y = %f z = %f\n", &w, &x, &y, &z);
 		if (conv == 4) {
-			orientation = (Vector4) { x/1000.f, y/1000.f, z/1000.f, w/1000.f };
+			orientation = (Vector4) { x, y, z, w };
 		}
 	}
 	return NULL;
@@ -132,8 +132,7 @@ void* render_thread(void* arg) {
 
 		// Swap axes of coordinate system and convert quaternion to rotation matrix
 		Vector4 rot = { orientation.x, orientation.z, orientation.y, orientation.w };
-		Matrix transform = QuaternionToMatrix(rot);
-		cube_model.transform=transform;
+		cube_model.transform = QuaternionToMatrix(rot);
 
 		BeginDrawing();
 		ClearBackground(BLACK);
